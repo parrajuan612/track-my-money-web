@@ -2,6 +2,7 @@
 import { Eye } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/providers/auth-context";
+import Link from "next/link";
 import { GoogleLogin } from "@react-oauth/google";
 
 
@@ -113,10 +114,12 @@ export function LoginForm() {
           </button>
         </div>
 
-        <p className="mt-8 text-center text-[0.9rem] text-[#8c8ca5]">
-          ¿No tienes cuenta?{" "}
-          <button className="font-bold text-[#5b38ff] hover:underline">Regístrate</button>
-        </p>
+<p className="mt-8 text-center text-[0.9rem] text-[#8c8ca5]">
+  ¿No tienes cuenta?{" "}
+  <Link href="/register" className="font-bold text-[#5b38ff] hover:underline">
+    Regístrate
+  </Link>
+</p>
       </div>
     </section>
   );

@@ -33,7 +33,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     router.push("/login"); // <-- Redirigimos al login al salir
   };
-
+const register = async (name: string, email: string, password?: string) => {
+    const response = await authService.register({ name, email, password });
+    setUser(response.user ?? null);
+    router.push("/dashboard"); // Redirigimos directo a la app
+  };
   // 4. Validar sesión al cargar la página
   useEffect(() => {
     const loadUser = async () => {
@@ -50,14 +54,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadUser();
   }, []);
 
-  return (
+return (
     <AuthContext.Provider
       value={{
         user,
         isAuthenticated,
         loading,
         login,
-        loginWithGoogle, 
+        loginWithGoogle,
+        register, // <-- La proveemos aquí
         logout,
         setUser,
         setLoading,

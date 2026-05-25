@@ -6,6 +6,7 @@ import {
   LoginRequest,
   LoginResponse,
   GoogleLoginRequest,
+  RegisterRequest,
 } from "../types/auth.types";
 
 export const authService = {
@@ -23,9 +24,13 @@ export const authService = {
     await api.post("/auth/logout");
   },
 
-  // Ahora 'User' ya será reconocido aquí
+  
   async getMe(): Promise<{ user: User }> {
     const response = await api.get<{ user: User }>("/auth/me");
+    return response.data;
+  },
+  async register(data: RegisterRequest): Promise<LoginResponse> {
+    const response = await api.post<LoginResponse>("/auth/register", data);
     return response.data;
   },
 };
