@@ -39,20 +39,24 @@ const register = async (name: string, email: string, password?: string) => {
     router.push("/dashboard"); // Redirigimos directo a la app
   };
   // 4. Validar sesión al cargar la página
-  useEffect(() => {
+useEffect(() => {
     const loadUser = async () => {
       try {
         const data = await authService.getMe();
         setUser(data.user ?? null);
       } catch {
         setUser(null);
+        // Si no estamos en el login o register, y no hay usuario, mandamos al login
+        if (window.location.pathname !== "/login" && window.location.pathname !== "/register") {
+          router.push("/login");
+        }
       } finally {
         setLoading(false);
       }
     };
 
     loadUser();
-  }, []);
+  }, [router]);
 
 return (
     <AuthContext.Provider

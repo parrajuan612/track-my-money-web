@@ -20,8 +20,15 @@ export const authService = {
     return response.data;
   },
 
-  async logout(): Promise<void> {
-    await api.post("/auth/logout");
+async logout(): Promise<void> {
+   
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token"); 
+   
+    }
+    
+
+    return Promise.resolve();
   },
 
   
