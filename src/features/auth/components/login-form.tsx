@@ -8,7 +8,7 @@ import { GoogleLogin } from "@react-oauth/google";
 
 export function LoginForm() {
   const { login, loginWithGoogle } = useAuth();
-  
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -108,18 +108,18 @@ export function LoginForm() {
               text="continue_with"
             />
           </div>
-          
+
           <button className="flex items-center justify-center gap-3 w-full rounded-full border border-[#ece9f6] bg-white py-2.5 text-[0.95rem] font-bold text-[#26263d] transition-all hover:bg-[#f6f4fa]">
-             Apple
+            Apple
           </button>
         </div>
 
-<p className="mt-8 text-center text-[0.9rem] text-[#8c8ca5]">
-  ¿No tienes cuenta?{" "}
-  <Link href="/register" className="font-bold text-[#5b38ff] hover:underline">
-    Regístrate
-  </Link>
-</p>
+        <p className="mt-8 text-center text-[0.9rem] text-[#8c8ca5]">
+          ¿No tienes cuenta?{" "}
+          <Link href="/register" className="font-bold text-[#5b38ff] hover:underline">
+            Regístrate
+          </Link>
+        </p>
       </div>
     </section>
   );
