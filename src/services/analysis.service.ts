@@ -38,12 +38,15 @@ export const analysisService = {
     );
     return response.data;
   },
-  async getCategoryDistribution(month: string): Promise<CategoryDistributionResponse> {
-    const response = await api.get<CategoryDistributionResponse>(
-      `/analysis?type=category-distribution&month=${month}`
-    );
+async getCategoryDistribution(startDate: string, endDate: string) {
+    const response = await api.get("/analysis", {
+      params: {
+        type: "category-distribution", // El type que espera Go
+        start_date: startDate,
+        end_date: endDate,
+      },
+    });
     return response.data;
-
   },
   async getMoneyFlow(range: string, accountId?: string): Promise<MoneyFlowData[]> {
     // Si tenemos un accountId específico lo mandamos, si no, traemos el global

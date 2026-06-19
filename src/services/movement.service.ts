@@ -32,4 +32,32 @@ export const movementService = {
     );
     return response.data;
   },
+    async getMovements(filters: MovementFilters = {}): Promise<PaginatedMovements> {
+    // Axios convierte automáticamente este objeto 'params' en query strings
+    // Ejemplo: /movements?page=1&page_size=10&type=expense
+    const response = await api.get("/movements", { params: filters });
+    return response.data;
+  }
 };
+export interface MovementFilters {
+  start_date?: string;
+  end_date?: string;
+  bank_id?: number;
+  account_id?: string;
+  category_id?: number;
+  type?: string; // "income" | "expense"
+  query?: string;
+  page?: number;
+  page_size?: number;
+  sort_by?: string;
+  sort_order?: string; // "asc" | "desc"
+}
+
+// Interfaz para la respuesta paginada que debería devolver tu backend
+export interface PaginatedMovements {
+  data: any[]; // Aquí iría tu interfaz de Movement
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}

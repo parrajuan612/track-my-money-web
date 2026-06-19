@@ -143,14 +143,15 @@ const displayedMovements = movements.slice(0, 3);
       </div>
 
       {/* Enlace de Ver todos (Padding reducido) */}
-      <div className="p-5 pt-3 text-right mt-auto">
-        <Link 
-          href="/dashboard/movements" 
-          className="flex items-center gap-1 justify-end text-[0.8rem] font-bold text-[#5b38ff] transition-colors hover:text-[#4620ff]"
-        >
-          Ver todos <ArrowRight size={14} />
-        </Link>
-      </div>
+    <div className="mt-6 flex justify-end">
+    <Link 
+      href="/dashboard/movements" 
+      className="flex items-center gap-1 text-sm font-bold text-[#5b38ff] hover:text-[#4524db] transition-colors"
+    >
+      Ver todos 
+      <span aria-hidden="true">&rarr;</span>
+    </Link>
+  </div>
     </div>
   );
 }
