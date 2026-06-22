@@ -34,21 +34,6 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString("es-CO", { year: 'numeric', month: 'short', day: '2-digit' });
 };
 
-// --- SIMULADOR DE TENDENCIAS (MOCK) ---
-// TODO: Reemplazar esto en el futuro con una llamada a Go que devuelva los gastos agrupados por día
-const generateTrendData = (total: number) => {
-  if (total <= 0) return [];
-  const days = ["Semana 1", "Semana 2", "Semana 3", "Semana 4"];
-  // Dividimos el total de forma aleatoria pero consistente
-  let remaining = total;
-  return days.map((day, index) => {
-    if (index === days.length - 1) return { name: day, amount: remaining };
-    const randomAmount = Math.floor(Math.random() * (remaining * 0.5));
-    remaining -= randomAmount;
-    return { name: day, amount: randomAmount };
-  });
-};
-
 export default function AnalysisPage() {
   const today = new Date();
   const [startDate, setStartDate] = useState(getFirstDayOfMonth(today));
@@ -68,6 +53,10 @@ export default function AnalysisPage() {
   const [sortBy, setSortBy] = useState("date"); 
   const [sortOrder, setSortOrder] = useState("DESC"); 
 
+  const [trendData, setTrendData] = useState<any[]>([]);
+  const [loadingTrends, setLoadingTrends] = useState(false);
+
+  // 1. Cargar Resumen de la Dona
   const fetchAnalysis = async () => {
     setLoadingAnalysis(true);
     try {
@@ -86,6 +75,7 @@ export default function AnalysisPage() {
     fetchAnalysis();
   }, [startDate, endDate]);
 
+  // 2. Cargar Tabla Cruzada
   const fetchTableMovements = useCallback(async () => {
     setLoadingMovements(true);
     try {
@@ -122,6 +112,84 @@ export default function AnalysisPage() {
   useEffect(() => {
     fetchTableMovements();
   }, [fetchTableMovements]);
+
+  // 3. Cargar Gráfico de Tendencias Real (OPTIMIZADO PARA UX)
+  const fetchTrends = useCallback(async () => {
+    setLoadingTrends(true);
+    try {
+      let catId = undefined;
+      if (selectedCategory) {
+        const catObj = CATEGORIES.find(c => c.name === selectedCategory.category_name);
+        if (catObj) catId = catObj.id;
+      }
+
+      const result = await analysisService.getExpenseTrends(startDate, endDate, catId);
+      
+      const diffTime = Math.abs(new Date(endDate).getTime() - new Date(startDate).getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+
+      let formattedTrends: any[] = [];
+
+      if (diffDays <= 35) {
+        formattedTrends = (result || []).map((item: any) => {
+          const rawDate = item.name || item.Name || item.date || item.Date;
+          if (!rawDate) return { ...item, xLabel: "-", tooltipLabel: "Sin fecha" };
+          const d = new Date(rawDate + 'T00:00:00');
+          if (isNaN(d.getTime())) return { ...item, xLabel: "-", tooltipLabel: rawDate };
+          
+          return {
+            ...item,
+            // xLabel: Solo el número del día (Ej: "15") para que no se apriete el eje X
+            xLabel: d.getDate().toString(), 
+            // tooltipLabel: La fecha bonita para la caja negra (Ej: "15 may")
+            tooltipLabel: d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) 
+          };
+        });
+      } else {
+        const monthlyData: { [key: string]: { amount: number, label: string, shortLabel: string } } = {};
+        
+        (result || []).forEach((item: any) => {
+          const rawDate = item.name || item.Name || item.date || item.Date;
+          if (!rawDate) return;
+          const d = new Date(rawDate + 'T00:00:00');
+          if (isNaN(d.getTime())) return;
+
+          const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          const monthLabel = d.toLocaleDateString('es-CO', { month: 'short', year: 'numeric' });
+          const shortLabel = d.toLocaleDateString('es-CO', { month: 'short' });
+
+          if (!monthlyData[monthKey]) {
+            monthlyData[monthKey] = { amount: 0, label: monthLabel, shortLabel: shortLabel };
+          }
+          
+          monthlyData[monthKey].amount += Number(item.amount || item.Amount || 0);
+        });
+
+        formattedTrends = Object.keys(monthlyData)
+          .sort()
+          .map(key => ({
+            name: key,
+            // xLabel: Mes abreviado (Ej: "May") para el eje X
+            xLabel: monthlyData[key].shortLabel.charAt(0).toUpperCase() + monthlyData[key].shortLabel.slice(1), 
+            // tooltipLabel: Mes y año (Ej: "May 2026") para la caja negra
+            tooltipLabel: monthlyData[key].label.charAt(0).toUpperCase() + monthlyData[key].label.slice(1),
+            amount: monthlyData[key].amount
+          }));
+      }
+
+      setTrendData(formattedTrends);
+    } catch (error) {
+      console.error("Error cargando tendencias:", error);
+      setTrendData([]);
+    } finally {
+      setLoadingTrends(false);
+    }
+  }, [startDate, endDate, selectedCategory]);
+
+  useEffect(() => {
+    fetchTrends();
+  }, [fetchTrends]);
+
 
   const handleQuickRange = (range: string) => {
     setActiveRange(range);
@@ -161,11 +229,13 @@ export default function AnalysisPage() {
     return null;
   };
 
-  const BarTooltip = ({ active, payload, label }: any) => {
+  // TOOLTIP DE BARRAS ACTUALIZADO PARA LEER tooltipLabel
+  const BarTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
+      const data = payload[0].payload;
       return (
         <div className="rounded-xl border border-[#ece9f6] bg-[#1f1f35] p-3 shadow-lg outline-none text-white">
-          <p className="mb-1 font-bold text-xs">{label}</p>
+          <p className="mb-1 font-bold text-xs text-white/70 uppercase tracking-wider">{data.tooltipLabel}</p>
           <p className="text-sm font-extrabold text-[#5b38ff]">{formatCurrency(payload[0].value)}</p>
         </div>
       );
@@ -174,10 +244,8 @@ export default function AnalysisPage() {
   };
 
   const validCategories = data?.categories || [];
-  const currentTotalBase = selectedCategory ? selectedCategory.amount : (data?.total_expenses || 1);
-  const trendData = generateTrendData(currentTotalBase);
+  const currentTotalBase = selectedCategory ? selectedCategory.amount : (data?.total_expenses || 0);
 
-  // Calcular días seleccionados para el promedio
   const diffTime = Math.abs(new Date(endDate).getTime() - new Date(startDate).getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
   const averagePerDay = currentTotalBase / diffDays;
@@ -224,7 +292,7 @@ export default function AnalysisPage() {
                <p className="text-sm font-medium">No hay gastos en este periodo</p>
              </div>
           ) : (
-            <div className="flex-1 flex flex-col">
+<div className="flex-1 flex flex-col">
               <div className="h-[250px] w-full mt-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -257,21 +325,58 @@ export default function AnalysisPage() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
+
+              {/* LEYENDA DETALLADA (Igual a la del Dashboard inicial) */}
+              <div className="mt-4 mb-4 grid grid-cols-2 gap-3 overflow-y-auto max-h-[160px] pr-2">
+                {validCategories.map((category: any, index: number) => {
+                  // Verificamos si esta categoría es la que está seleccionada
+                  const isSelected = selectedCategory?.category_name === category.category_name;
+                  const isOpacated = selectedCategory && !isSelected;
+
+                  return (
+                    <div 
+                      key={category.category_name} 
+                      onClick={() => {
+                        if (isSelected) setSelectedCategory(null);
+                        else setSelectedCategory(category);
+                        setPage(1);
+                      }}
+                      className={`flex items-center gap-2 cursor-pointer transition-opacity duration-300 hover:opacity-100 ${isOpacated ? 'opacity-30' : 'opacity-100'}`}
+                    >
+                      <div 
+                        className="h-3 w-3 rounded-full shrink-0" 
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      <div className="flex flex-col overflow-hidden">
+                        <span className="truncate text-xs font-bold text-[#1f1f35]" title={category.category_name}>
+                          {category.category_name}
+                        </span>
+                        <span className="text-xs text-[#8c8ca5]">
+                          {category.percentage?.toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              <div className="mt-auto pt-4 border-t border-[#ece9f6] text-center">
+                <p className="text-xs font-bold text-[#8c8ca5] uppercase tracking-wider">Total Gastado</p>
+                <p className="text-xl font-extrabold text-[#ff4d4d]">{formatCurrency(data?.total_expenses || 0)}</p>
+              </div>
             </div>
           )}
         </div>
 
-        {/* FASE 5: TENDENCIAS Y TARJETAS DE RESUMEN */}
+        {/* FASE 5: TENDENCIAS REALES */}
         <div className="lg:col-span-2 flex flex-col gap-6">
-          
-          {/* Tarjetas Superiores */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="rounded-[24px] bg-[#5b38ff] p-5 shadow-lg shadow-[#5b38ff]/20 text-white flex flex-col justify-center">
               <div className="flex items-center gap-2 mb-2 text-white/80">
                 <CreditCard size={16} />
                 <span className="text-xs font-bold uppercase tracking-wider">Total Seleccionado</span>
               </div>
-              <h3 className="text-2xl font-extrabold">{formatCurrency(currentTotalBase === 1 ? 0 : currentTotalBase)}</h3>
+              <h3 className="text-2xl font-extrabold">{formatCurrency(currentTotalBase)}</h3>
             </div>
 
             <div className="rounded-[24px] border border-[#ece9f6] bg-white p-5 shadow-sm flex flex-col justify-center">
@@ -279,7 +384,7 @@ export default function AnalysisPage() {
                 <Activity size={16} />
                 <span className="text-xs font-bold uppercase tracking-wider">Promedio Diario</span>
               </div>
-              <h3 className="text-2xl font-extrabold text-[#1f1f35]">{formatCurrency(currentTotalBase === 1 ? 0 : averagePerDay)}</h3>
+              <h3 className="text-2xl font-extrabold text-[#1f1f35]">{formatCurrency(currentTotalBase === 0 ? 0 : averagePerDay)}</h3>
             </div>
 
             <div className="rounded-[24px] border border-[#ece9f6] bg-white p-5 shadow-sm flex flex-col justify-center">
@@ -291,7 +396,6 @@ export default function AnalysisPage() {
             </div>
           </div>
 
-          {/* Gráfico de Barras de Tendencia */}
           <div className="rounded-[24px] border border-[#ece9f6] bg-white p-6 shadow-sm flex-1 flex flex-col">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-extrabold text-[#1f1f35]">
@@ -308,13 +412,16 @@ export default function AnalysisPage() {
             </div>
             
             <div className="flex-1 w-full min-h-[200px]">
-              {validCategories.length === 0 ? (
+              {loadingTrends ? (
+                <div className="h-full flex items-center justify-center text-[#8c8ca5] animate-pulse">Calculando tendencias...</div>
+              ) : trendData.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-[#8c8ca5] text-sm">Sin datos para graficar</div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ece9f6" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#8c8ca5', fontWeight: 600 }} dy={10} />
+                    {/* EJE X ACTUALIZADO: Usa xLabel en lugar de shortDate */}
+                    <XAxis dataKey="xLabel" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#8c8ca5', fontWeight: 600 }} dy={10} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#8c8ca5' }} tickFormatter={(val) => `$${(val/1000).toFixed(0)}k`} />
                     <RechartsTooltip cursor={{fill: '#f8f9fc'}} content={<BarTooltip />} />
                     <Bar dataKey="amount" fill="#5b38ff" radius={[6, 6, 0, 0]} maxBarSize={50} />

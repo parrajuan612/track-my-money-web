@@ -14,14 +14,14 @@ import {
   Settings 
 } from "lucide-react";
 
-// Definimos nuestra lista de opciones de menú para no repetir código
+
 const menuItems = [
   { name: "Resumen", href: "/dashboard", icon: Home },
   { name: "Movimientos", href: "/dashboard/movements", icon: ArrowLeftRight },
   { name: "Categorías", href: "/dashboard/categories", icon: LayoutGrid },
   { name: "Presupuestos", href: "/dashboard/budgets", icon: PieChart },
   { name: "Metas", href: "/dashboard/goals", icon: Target },
-  { name: "Análisis", href: "/dashboard/analytics", icon: TrendingUp },
+  { name: "Análisis", href: "/dashboard/analysis", icon: TrendingUp },
   { name: "Reportes", href: "/dashboard/reports", icon: FileText },
   { name: "Cuentas", href: "/dashboard/accounts", icon: CreditCard },
   { name: "Configuración", href: "/dashboard/settings", icon: Settings },

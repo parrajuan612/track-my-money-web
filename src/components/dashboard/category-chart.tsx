@@ -88,7 +88,7 @@ export function CategoryChart() {
       <div className="flex h-full min-h-[380px] w-full flex-col rounded-[24px] border border-[#ece9f6] bg-white p-6 shadow-sm">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-extrabold text-[#1f1f35]">Gastos de este mes</h3>
+            <h3 className="text-lg font-extrabold text-[#1f1f35]">Gastos </h3>
             <p className="text-xs font-medium text-[#8c8ca5] capitalize">{currentMonthName}</p>
           </div>
           <Link href="/dashboard/analysis" className="flex items-center gap-1 text-xs font-bold text-[#5b38ff] hover:text-[#4524db] transition-colors">
@@ -107,7 +107,7 @@ export function CategoryChart() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           {/* Título más explícito como sugeriste */}
-          <h3 className="text-lg font-extrabold text-[#1f1f35]">Gastos de este mes</h3>
+          <h3 className="text-lg font-extrabold text-[#1f1f35]">Gastos </h3>
           <p className="text-xs font-medium text-[#8c8ca5] capitalize">{currentMonthName}</p>
         </div>
         <Link 
