@@ -1,4 +1,4 @@
-import { api } from "./api";
+import api from "@/services/api"; // O import api from "./api" dependiendo de tu carpeta
 
 // 1. Definimos la estructura del Movimiento
 export interface Movement {
@@ -12,7 +12,7 @@ export interface Movement {
   bank_name: string;
 }
 
-// 2. Definimos la estructura de la respuesta (Datos + Paginación)
+// 2. Definimos las estructuras de Paginación y Filtros
 export interface MovementsResponse {
   data: Movement[];
   meta: {
@@ -22,42 +22,57 @@ export interface MovementsResponse {
   };
 }
 
-export const movementService = {
-  // Pedimos solo los últimos movimientos (ej: últimos 5)
-  async getRecentMovements(): Promise<MovementsResponse> {
-    // Le pasamos un page_size pequeño. Si tu backend requiere fechas por defecto, 
-    // se las puedes agregar a esta URL.
-    const response = await api.get<MovementsResponse>(
-      "/movements?page=1&page_size=5"
-    );
-    return response.data;
-  },
-    async getMovements(filters: MovementFilters = {}): Promise<PaginatedMovements> {
-    // Axios convierte automáticamente este objeto 'params' en query strings
-    // Ejemplo: /movements?page=1&page_size=10&type=expense
-    const response = await api.get("/movements", { params: filters });
-    return response.data;
-  }
-};
+export interface PaginatedMovements {
+  data: any[]; 
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 export interface MovementFilters {
   start_date?: string;
   end_date?: string;
   bank_id?: number;
   account_id?: string;
   category_id?: number;
-  type?: string; // "income" | "expense"
+  type?: string; 
   query?: string;
   page?: number;
   page_size?: number;
   sort_by?: string;
-  sort_order?: string; // "asc" | "desc"
+  sort_order?: string; 
 }
 
-// Interfaz para la respuesta paginada que debería devolver tu backend
-export interface PaginatedMovements {
-  data: any[]; // Aquí iría tu interfaz de Movement
-  total: number;
-  page: number;
-  page_size: number;
-  total_pages: number;
-}
+// 3. El Servicio Completo (Aquí están TODAS las funciones)
+export const movementService = {
+  
+  // Obtener recientes (Dashboard)
+  async getRecentMovements(): Promise<MovementsResponse> {
+    const response = await api.get<MovementsResponse>("/movements?page=1&page_size=5");
+    return response.data;
+  },
+
+  // Obtener todos con filtros (Tabla)
+  async getMovements(filters: MovementFilters = {}): Promise<PaginatedMovements> {
+    const response = await api.get("/movements", { params: filters });
+    return response.data;
+  },
+
+  // EDITAR 
+  async updateMovement(id: string, data: { description: string; amount: number; type: string; category_id: number }) {
+    const response = await api.put(`/movements/${id}`, data);
+    return response.data;
+  },
+
+  // CREAR (La que te marcaba el error)
+  async createMovement(data: { date: string; description: string; amount: number; type: string; category_id: number }) {
+    const response = await api.post(`/movements`, data);
+    return response.data;
+  },
+  // ELIMINAR
+  async deleteMovement(id: string) {
+    const response = await api.delete(`/movements/${id}`);
+    return response.data;
+  }
+};
