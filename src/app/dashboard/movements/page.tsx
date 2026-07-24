@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, Calendar, Filter, RefreshCw, Edit2, X, Trash2 } from "lucide-react";
+import { Search, Calendar, Filter, RefreshCw, Edit2, X, Trash2, Landmark } from "lucide-react";
 import { movementService } from "@/services/movement.service";
+import { accountService, Account } from "@/services/account.service";
 
 const CATEGORIES = [
   { id: 1, name: "Restaurante/Comida/Supermercado" },
@@ -35,6 +36,9 @@ export default function MovementsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   
+  // --- ESTADOS DE CUENTAS (Para el selector) ---
+  const [accounts, setAccounts] = useState<Account[]>([]);
+
   // Filtros
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -50,13 +54,14 @@ export default function MovementsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newMov, setNewMov] = useState({
     date: new Date().toISOString().split('T')[0],
+    account_id: "", // ¡NUEVO CAMPO!
     description: "",
     amount: "",
     type: "expense",
     category_id: 12
   });
 
-  // 1. Cargar la tabla
+  // 1. Cargar la tabla y las cuentas
   const fetchMovements = useCallback(async () => {
     setLoading(true);
     try {
@@ -79,6 +84,19 @@ export default function MovementsPage() {
       setLoading(false);
     }
   }, [page, search, startDate, endDate, type, categoryId]);
+
+  // Cargar cuentas solo una vez al montar el componente
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      try {
+        const data = await accountService.getAccounts();
+        setAccounts(data || []);
+      } catch (error) {
+        console.error("Error cargando cuentas:", error);
+      }
+    };
+    fetchAccounts();
+  }, []);
 
   useEffect(() => {
     fetchMovements();
@@ -131,9 +149,15 @@ export default function MovementsPage() {
   // 5. Guardar Nuevo Movimiento
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newMov.account_id) {
+      alert("Por favor selecciona una cuenta bancaria.");
+      return;
+    }
+
     try {
       await movementService.createMovement({
         date: newMov.date,
+        account_id: newMov.account_id, // Enviamos el ID de la cuenta elegida
         description: newMov.description,
         amount: Number(newMov.amount),
         type: newMov.type,
@@ -141,26 +165,27 @@ export default function MovementsPage() {
       });
       
       setIsCreateModalOpen(false);
-      setNewMov({ date: new Date().toISOString().split('T')[0], description: "", amount: "", type: "expense", category_id: 12 });
+      setNewMov({ date: new Date().toISOString().split('T')[0], account_id: "", description: "", amount: "", type: "expense", category_id: 12 });
       fetchMovements(); 
     } catch (error) {
       console.error("Error al crear:", error);
       alert("Hubo un error al crear el movimiento.");
     }
   };
-// 6. Función para eliminar
-const handleDelete = async (id: string) => {
-  // Alerta moderna y sencilla de confirmación
-  if (window.confirm("¿Estás seguro de que deseas eliminar este movimiento? Esta acción no se puede deshacer.")) {
-    try {
-      await movementService.deleteMovement(id);
-      fetchMovements(); // Recargamos la tabla
-    } catch (error) {
-      console.error("Error al eliminar:", error);
-      alert("Hubo un error al eliminar el movimiento.");
+
+  // 6. Función para eliminar
+  const handleDelete = async (id: string) => {
+    if (window.confirm("¿Estás seguro de que deseas eliminar este movimiento? Esta acción no se puede deshacer.")) {
+      try {
+        await movementService.deleteMovement(id);
+        fetchMovements(); 
+      } catch (error) {
+        console.error("Error al eliminar:", error);
+        alert("Hubo un error al eliminar el movimiento.");
+      }
     }
-  }
-};
+  };
+
   return (
     <div className="flex flex-col gap-6 max-w-[1400px] mx-auto pb-10">
       
@@ -277,7 +302,6 @@ const handleDelete = async (id: string) => {
                       
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          {/* EDITAR */}
                           <button 
                             onClick={() => handleEditClick(mov)}
                             className="text-[#b5b5c3] hover:text-[#5b38ff] transition-colors p-2 rounded-lg hover:bg-[#f0edff] opacity-50 group-hover:opacity-100"
@@ -285,8 +309,6 @@ const handleDelete = async (id: string) => {
                           >
                             <Edit2 size={16} />
                           </button>
-
-                          {/* ELIMINAR */}
                           <button 
                             onClick={() => handleDelete(mov.ID || mov.id)}
                             className="text-[#b5b5c3] hover:text-[#ff4d4d] transition-colors p-2 rounded-lg hover:bg-[#ffe5e5] opacity-50 group-hover:opacity-100"
@@ -325,6 +347,7 @@ const handleDelete = async (id: string) => {
       </div>
 
       {/* --- MODAL DE EDICIÓN FLOTANTE --- */}
+      {/* ... (Se mantiene igual que antes) ... */}
       {isEditModalOpen && editingMov && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1f35]/40 backdrop-blur-sm px-4">
           <div className="w-full max-w-md rounded-[24px] bg-white p-6 shadow-2xl">
@@ -336,7 +359,6 @@ const handleDelete = async (id: string) => {
             </div>
 
             <form onSubmit={handleUpdate} className="flex flex-col gap-4">
-              {/* FECHA BLOQUEADA PARA EDICIÓN */}
               <div>
                 <label className="mb-1 block text-xs font-bold text-[#8c8ca5] uppercase tracking-wider">Fecha (No editable)</label>
                 <input 
@@ -433,16 +455,38 @@ const handleDelete = async (id: string) => {
 
             <form onSubmit={handleCreate} className="flex flex-col gap-4">
               
-              {/* FECHA EDITABLE PARA CREACIÓN */}
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="mb-1 block text-xs font-bold text-[#8c8ca5] uppercase tracking-wider">Fecha</label>
+                  <input 
+                    type="date" 
+                    required
+                    value={newMov.date} 
+                    onChange={(e) => setNewMov({...newMov, date: e.target.value})}
+                    className="w-full rounded-xl border border-[#ece9f6] bg-white p-3 text-sm font-medium text-[#1f1f35] outline-none focus:border-[#5b38ff] focus:ring-2 focus:ring-[#5b38ff]/20 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* ¡NUEVO SELECTOR DE CUENTAS! */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-[#8c8ca5] uppercase tracking-wider">Fecha</label>
-                <input 
-                  type="date" 
-                  required
-                  value={newMov.date} 
-                  onChange={(e) => setNewMov({...newMov, date: e.target.value})}
-                  className="w-full rounded-xl border border-[#ece9f6] bg-white p-3 text-sm font-medium text-[#1f1f35] outline-none focus:border-[#5b38ff] focus:ring-2 focus:ring-[#5b38ff]/20 transition-all"
-                />
+                <label className="mb-1 block text-xs font-bold text-[#8c8ca5] uppercase tracking-wider">Cuenta Destino / Origen</label>
+                <div className="relative">
+                  <Landmark size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#b5b5c3]" />
+                  <select 
+                    required
+                    value={newMov.account_id} 
+                    onChange={(e) => setNewMov({...newMov, account_id: e.target.value})}
+                    className="w-full appearance-none rounded-xl border border-[#ece9f6] bg-white p-3 pl-10 text-sm font-bold text-[#1f1f35] outline-none focus:border-[#5b38ff] focus:ring-2 focus:ring-[#5b38ff]/20 transition-all"
+                  >
+                    <option value="" disabled>Selecciona una cuenta</option>
+                    {accounts.map(acc => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name} ({acc.bank?.name})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>

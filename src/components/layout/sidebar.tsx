@@ -18,13 +18,8 @@ import {
 const menuItems = [
   { name: "Resumen", href: "/dashboard", icon: Home },
   { name: "Movimientos", href: "/dashboard/movements", icon: ArrowLeftRight },
-  { name: "Categorías", href: "/dashboard/categories", icon: LayoutGrid },
-  { name: "Presupuestos", href: "/dashboard/budgets", icon: PieChart },
-  { name: "Metas", href: "/dashboard/goals", icon: Target },
   { name: "Análisis", href: "/dashboard/analysis", icon: TrendingUp },
-  { name: "Reportes", href: "/dashboard/reports", icon: FileText },
   { name: "Cuentas", href: "/dashboard/accounts", icon: CreditCard },
-  { name: "Configuración", href: "/dashboard/settings", icon: Settings },
 ];
 
 export function Sidebar() {

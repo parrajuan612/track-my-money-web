@@ -90,18 +90,18 @@ return (
       </div>
 
       {/* Tarjeta 3: BALANCE TOTAL (Ajustado p-5) */}
-      <div className="rounded-[24px] bg-[#5b38ff] p-5 shadow-[0_8px_25px_rgba(91,56,255,0.3)] text-white flex flex-col justify-between h-[130px]">
+<div className="rounded-[24px] bg-white p-5 shadow-sm border border-[#ece9f6] flex flex-col justify-between h-[130px]">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 text-white backdrop-blur-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f0edff] text-[#5b38ff]">
             <Wallet size={20} />
           </div>
-          <span className="text-xs font-medium text-white/80">Balance total</span>
+          <span className="text-xs font-medium text-[#8c8ca5]">Balance total</span>
         </div>
         <div>
-          <h3 className="text-xl font-bold mb-1">
+          <h3 className="text-xl font-bold text-[#1f1f35] mb-1">
             {formatCurrency(totalBalance)}
           </h3>
-          <p className="text-[10px] font-medium text-white/80">
+          <p className="text-[10px] font-medium text-[#8c8ca5]">
             Flujo de caja neto
           </p>
         </div>
@@ -110,13 +110,13 @@ return (
       {/* NUEVA Tarjeta 4: CARGAR EXTRACTO */}
 <div 
         onClick={() => setIsModalOpen(true)} 
-        className="rounded-[24px] bg-white p-5 shadow-sm border border-dashed border-[#5b38ff] hover:bg-[#f0edff] transition-colors cursor-pointer flex flex-col items-center justify-center h-[130px] group"
+        className="rounded-[24px] bg-[#5b38ff] p-5 shadow-[0_8px_25px_rgba(91,56,255,0.3)] hover:bg-[#4620ff] hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center h-[130px] group text-white"
       >
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f8f9fc] text-[#5b38ff] group-hover:bg-white transition-colors mb-2">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm transition-transform group-hover:scale-110 mb-2">
           <UploadCloud size={24} />
         </div>
-        <span className="text-sm font-bold text-[#5b38ff]">Cargar Extracto</span>
-        <span className="text-[10px] text-[#8c8ca5]">CSV, Excel, PDF</span>
+        <span className="text-sm font-bold text-white">Cargar Extracto</span>
+        <span className="text-[10px] font-medium text-white/80">PDF</span>
       </div>
 <UploadModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>

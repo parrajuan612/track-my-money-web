@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation"; // <-- Importamos el router
+import { useRouter, usePathname } from "next/navigation"; // ¡Agregamos usePathname!
 import { AuthContext } from "./auth-context";
 import { authService } from "@/features/auth/services/auth.service";
 import type { User } from "@/features/auth/types/auth.types";
@@ -9,7 +9,8 @@ import type { User } from "@/features/auth/types/auth.types";
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter(); // <-- Inicializamos el router
+  const router = useRouter();
+  const pathname = usePathname(); // Nos dice exactamente en qué página estamos
 
   const isAuthenticated = !!user;
 
@@ -17,37 +18,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password?: string) => {
     const response = await authService.login({ email, password });
     setUser(response.user ?? null);
-    router.push("/dashboard"); // <-- Redirigimos al éxito
+    router.push("/dashboard");
   };
 
   // 2. Login con Google
   const loginWithGoogle = async (idToken: string) => {
     const response = await authService.loginWithGoogle({ id_token: idToken });
     setUser(response.user ?? null);
-    router.push("/dashboard"); // <-- Redirigimos al éxito
+    router.push("/dashboard");
   };
 
   // 3. Cerrar sesión
   const logout = async () => {
     await authService.logout();
     setUser(null);
-    router.push("/login"); // <-- Redirigimos al login al salir
+    router.push("/login");
   };
-const register = async (name: string, email: string, password?: string) => {
+
+  const register = async (name: string, email: string, password?: string) => {
     const response = await authService.register({ name, email, password });
     setUser(response.user ?? null);
-    router.push("/dashboard"); // Redirigimos directo a la app
+    router.push("/dashboard");
   };
+
   // 4. Validar sesión al cargar la página
-useEffect(() => {
+  useEffect(() => {
     const loadUser = async () => {
       try {
+        // Asegurarnos de que estamos en el cliente (navegador)
+        if (typeof window === "undefined") {
+          return; 
+        }
+
+        const token = localStorage.getItem("token");
+        const isPublicRoute = pathname === "/login" || pathname === "/register";
+
+        // Si no hay token Y estamos en una ruta pública, no hay problema, solo detenemos la carga.
+        if (!token) {
+          if (!isPublicRoute) {
+             // Solo redirigimos si intenta entrar al dashboard sin token
+             router.push("/login");
+          }
+          setLoading(false);
+          return;
+        }
+
+        // Si hay token, preguntamos a Go si sigue siendo válido
         const data = await authService.getMe();
         setUser(data.user ?? null);
-      } catch {
+
+        // Opcional: Si está logueado e intenta entrar al /login, lo devolvemos al dashboard
+        if (isPublicRoute && data.user) {
+          router.push("/dashboard");
+        }
+        
+      } catch (error) {
+        console.error("Sesión inválida o expirada:", error);
         setUser(null);
-        // Si no estamos en el login o register, y no hay usuario, mandamos al login
-        if (window.location.pathname !== "/login" && window.location.pathname !== "/register") {
+        
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("token");
+        }
+        
+        if (pathname !== "/login" && pathname !== "/register") {
           router.push("/login");
         }
       } finally {
@@ -56,9 +89,9 @@ useEffect(() => {
     };
 
     loadUser();
-  }, [router]);
+  }, [router, pathname]); // Reaccionamos también si cambia la URL
 
-return (
+  return (
     <AuthContext.Provider
       value={{
         user,
@@ -66,7 +99,7 @@ return (
         loading,
         login,
         loginWithGoogle,
-        register, // <-- La proveemos aquí
+        register,
         logout,
         setUser,
         setLoading,

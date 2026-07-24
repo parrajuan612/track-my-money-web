@@ -65,8 +65,9 @@ export const movementService = {
     return response.data;
   },
 
-  // CREAR (La que te marcaba el error)
-  async createMovement(data: { date: string; description: string; amount: number; type: string; category_id: number }) {
+
+// CREAR
+  async createMovement(data: { date: string; account_id: string; description: string; amount: number; type: string; category_id: number }) {
     const response = await api.post(`/movements`, data);
     return response.data;
   },

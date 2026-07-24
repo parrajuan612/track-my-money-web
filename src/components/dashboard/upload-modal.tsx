@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { X, FileText, Building, Lock, AlertCircle, Loader2, UploadCloud, FileUp } from "lucide-react";
+import { X, FileText, Landmark, Lock, AlertCircle, Loader2, UploadCloud, FileUp } from "lucide-react";
 import { statementService } from "@/services/statement.service";
+import { accountService, Account } from "@/services/account.service"; // ¡Importamos el servicio de cuentas!
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -14,16 +15,44 @@ export function UploadModal({ isOpen, onClose }: UploadModalProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. TODOS LOS ESTADOS (Hooks)
+  // 1. ESTADOS
   const [file, setFile] = useState<File | null>(null);
-  const [bankId, setBankId] = useState("");
+  const [selectedAccountId, setSelectedAccountId] = useState("");
   const [password, setPassword] = useState("");
   
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
 
-  // 2. TODOS LOS USECALLBACKS (Hooks)
+  // 2. EFECTO PARA CARGAR LAS CUENTAS AL ABRIR EL MODAL
+  useEffect(() => {
+    if (isOpen) {
+      const fetchAccounts = async () => {
+        setLoadingAccounts(true);
+        try {
+          const data = await accountService.getAccounts();
+          setAccounts(data || []);
+        } catch (error) {
+          console.error("Error cargando cuentas:", error);
+          setError("No se pudieron cargar tus cuentas. Revisa tu conexión.");
+        } finally {
+          setLoadingAccounts(false);
+        }
+      };
+      fetchAccounts();
+    } else {
+      // Limpiar estados al cerrar
+      clearFile();
+      setSelectedAccountId("");
+      setPassword("");
+      setError("");
+    }
+  }, [isOpen]);
+
+  // 3. EVENTOS DRAG & DROP
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -52,7 +81,7 @@ export function UploadModal({ isOpen, onClose }: UploadModalProps) {
     }
   }, []);
 
-  // 3. FUNCIONES NORMALES
+  // 4. FUNCIONES NORMALES
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setFile(e.target.files[0]);
@@ -73,16 +102,29 @@ export function UploadModal({ isOpen, onClose }: UploadModalProps) {
       setError("Por favor, sube el archivo PDF de tu extracto.");
       return;
     }
-    if (!bankId) {
-      setError("Por favor, selecciona tu banco.");
+    if (!selectedAccountId) {
+      setError("Por favor, selecciona a qué cuenta pertenece este extracto.");
+      return;
+    }
+
+    // Buscamos la cuenta seleccionada para extraer su bank_id
+    const selectedAccount = accounts.find(acc => acc.id === selectedAccountId);
+    if (!selectedAccount) {
+      setError("La cuenta seleccionada no es válida.");
       return;
     }
 
     setLoading(true);
 
     try {
+      // Le pasamos el bank_id de la cuenta al parser para que sepa cómo leer el PDF
+      const bankId = selectedAccount.bank_id.toString();
       const result = await statementService.parseStatement(file, bankId, password);
+      
+      // Guardamos el resultado Y el ID de la cuenta en sessionStorage para la siguiente pantalla
       sessionStorage.setItem("parsedStatement", JSON.stringify(result));
+      sessionStorage.setItem("targetAccountId", selectedAccountId); 
+      sessionStorage.setItem("targetBankId", bankId);
       onClose();
       router.push("/dashboard/upload/review");
     } catch (err: any) {
@@ -93,10 +135,10 @@ export function UploadModal({ isOpen, onClose }: UploadModalProps) {
     }
   };
 
-  // 4. ¡EL RETORNO TEMPRANO VA AQUÍ! (Después de todos los hooks)
+  // 5. RETORNO TEMPRANO
   if (!isOpen) return null;
 
-  // 5. RENDERIZADO DEL HTML
+  // 6. RENDERIZADO
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1f35]/60 backdrop-blur-sm p-4 transition-opacity duration-300">
       <div className="w-full max-w-lg rounded-3xl bg-white p-10 shadow-2xl relative border border-[#ece9f6]">
@@ -173,17 +215,23 @@ export function UploadModal({ isOpen, onClose }: UploadModalProps) {
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-[#1f1f35]">2. Banco</label>
+              <label className="text-sm font-bold text-[#1f1f35]">2. Cuenta de Destino</label>
               <div className="relative">
-                <Building size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#b5b5c3]" />
+                <Landmark size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#b5b5c3]" />
                 <select
-                  value={bankId}
-                  onChange={(e) => setBankId(e.target.value)}
-                  className="w-full appearance-none rounded-xl border border-[#ece9f6] bg-white py-3.5 pl-11 pr-10 text-sm font-medium text-[#1f1f35] outline-none focus:border-[#5b38ff] focus:ring-1 focus:ring-[#5b38ff] transition-all"
+                  value={selectedAccountId}
+                  onChange={(e) => setSelectedAccountId(e.target.value)}
+                  disabled={loadingAccounts || accounts.length === 0}
+                  className="w-full appearance-none rounded-xl border border-[#ece9f6] bg-white py-3.5 pl-11 pr-10 text-sm font-medium text-[#1f1f35] outline-none focus:border-[#5b38ff] focus:ring-1 focus:ring-[#5b38ff] transition-all disabled:opacity-60"
                 >
-                  <option value="" disabled>Selecciona un banco</option>
-                  <option value="1">Bancolombia</option>
-                  <option value="2">Nu Bank</option>
+                  <option value="" disabled>
+                    {loadingAccounts ? "Cargando cuentas..." : accounts.length === 0 ? "Sin cuentas. ¡Crea una!" : "Selecciona una cuenta"}
+                  </option>
+                  {accounts.map(acc => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name} ({acc.bank?.name})
+                    </option>
+                  ))}
                 </select>
                 <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#b5b5c3]">
                     ▼
@@ -208,7 +256,7 @@ export function UploadModal({ isOpen, onClose }: UploadModalProps) {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !file || !selectedAccountId}
             className="mt-6 flex w-full items-center justify-center rounded-xl bg-[#5b38ff] py-4 text-base font-bold text-white transition-all hover:bg-[#4620ff] hover:shadow-lg hover:shadow-[#5b38ff]/20 disabled:opacity-70 active:scale-[0.98]"
           >
             {loading ? (

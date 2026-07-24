@@ -30,7 +30,7 @@ export default function ReviewImportPage() {
   const [saving, setSaving] = useState(false);
 
   // 1. Cargar datos de la memoria al entrar a la página
-  useEffect(() => {
+useEffect(() => {
     const storedData = sessionStorage.getItem("parsedStatement");
     if (!storedData) {
       // Si no hay datos (ej. entró directo a la URL), lo devolvemos al dashboard
@@ -40,7 +40,17 @@ export default function ReviewImportPage() {
 
     try {
       const parsed = JSON.parse(storedData);
-      setMovements(parsed.data || []);
+      
+      // ¡SOLUCIÓN!: Le asignamos un ID temporal único a cada fila
+      // para que React no se confunda y las funciones de editar/eliminar funcionen por separado.
+      const movementsWithUniqueIds = (parsed.data || []).map((mov: any, index: number) => ({
+        ...mov,
+        // Generamos un string como: "temp-0-x7y8z9"
+        id: `temp-${index}-${Math.random().toString(36).substring(2, 9)}`
+      }));
+
+      setMovements(movementsWithUniqueIds);
+      
       setMetadata({
         periodMonth: parsed.period_month,
         fileName: parsed.file_name,
@@ -82,16 +92,20 @@ export default function ReviewImportPage() {
 const handleSave = async () => {
     setSaving(true);
     try {
+      // Recuperamos los IDs de la cuenta y el banco que guardamos en el modal
+      const targetAccountId = sessionStorage.getItem("targetAccountId") || "";
+      const targetBankId = sessionStorage.getItem("targetBankId") || "1";
+
       // 1. Armamos el payload exacto que pide Go (SaveStatementRequest)
-const payload = {
+      const payload = {
+        account_id: targetAccountId,
+        bank_id: Number(targetBankId),
         period_month: metadata?.periodMonth || "",
         file_name: metadata?.fileName || "",
         movements: movements.map(mov => ({
           date: mov.date,
           description: mov.description,
-          
           category_id: (mov.category_id && mov.category_id > 0) ? Number(mov.category_id) : 12, 
-
           amount: Number(mov.amount),
           type: mov.type
         }))
@@ -104,8 +118,10 @@ const payload = {
 
       // 3. Limpiamos la memoria temporal
       sessionStorage.removeItem("parsedStatement");
+      sessionStorage.removeItem("targetAccountId");
+      sessionStorage.removeItem("targetBankId");
       
-      // 4. Redirigimos al dashboard (¡donde se verán reflejados los nuevos datos!)
+      // 4. Redirigimos al dashboard
       router.push("/dashboard");
       
     } catch (error) {
