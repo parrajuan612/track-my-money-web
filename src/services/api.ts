@@ -1,8 +1,8 @@
 import axios from "axios";
 
 const api = axios.create({
-  // Ajusta el puerto si tu Go corre en uno diferente (ej. 9080 o 8080)
-  baseURL: "http://localhost:9080/api/v1", 
+  // Aquí está la magia: Usa la variable de Vercel, o localhost si estás en tu PC
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:9080/api/v1", 
 });
 
 // Este "Interceptor" se ejecuta ANTES de que la petición salga hacia Go
