@@ -80,12 +80,13 @@ useEffect(() => {
   };
 
   // 4. Formateadores
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 2 }).format(amount);
-  };
-  
-  const formatDate = (dateString: string) => {
-    return new Intl.DateTimeFormat("es-CO", { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(dateString));
+const formatDate = (dateString: string) => {
+    return new Intl.DateTimeFormat("es-CO", { 
+      year: 'numeric', 
+      month: '2-digit', 
+      day: '2-digit',
+      timeZone: 'UTC' // ¡Esta es la línea mágica que arregla el bug!
+    }).format(new Date(dateString));
   };
 
   // 5. Función para Guardar en la DB
