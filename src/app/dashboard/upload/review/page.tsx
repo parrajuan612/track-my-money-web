@@ -30,7 +30,7 @@ export default function ReviewImportPage() {
   const [saving, setSaving] = useState(false);
 
   // 1. Cargar datos de la memoria al entrar a la página
-useEffect(() => {
+  useEffect(() => {
     const storedData = sessionStorage.getItem("parsedStatement");
     if (!storedData) {
       // Si no hay datos (ej. entró directo a la URL), lo devolvemos al dashboard
@@ -80,17 +80,22 @@ useEffect(() => {
   };
 
   // 4. Formateadores
-const formatDate = (dateString: string) => {
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 2 }).format(amount);
+  };
+  
+  // AQUÍ ESTÁ LA MAGIA DEL UTC PARA ARREGLAR LA FECHA
+  const formatDate = (dateString: string) => {
     return new Intl.DateTimeFormat("es-CO", { 
       year: 'numeric', 
       month: '2-digit', 
       day: '2-digit',
-      timeZone: 'UTC' // ¡Esta es la línea mágica que arregla el bug!
+      timeZone: 'UTC' 
     }).format(new Date(dateString));
   };
 
   // 5. Función para Guardar en la DB
-const handleSave = async () => {
+  const handleSave = async () => {
     setSaving(true);
     try {
       // Recuperamos los IDs de la cuenta y el banco que guardamos en el modal
@@ -188,10 +193,10 @@ const handleSave = async () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#ece9f6]">
-{movements.map((mov) => {
-    const isIncome = mov.type === "income" || mov.amount > 0;
-    return (
-      <tr key={mov.id} className="hover:bg-[#f8f9fc]/50 transition-colors group">
+                {movements.map((mov) => {
+                  const isIncome = mov.type === "income" || mov.amount > 0;
+                  return (
+                    <tr key={mov.id} className="hover:bg-[#f8f9fc]/50 transition-colors group">
                       {/* Fecha */}
                       <td className="px-6 py-4 whitespace-nowrap text-[#8c8ca5] font-medium">
                         {formatDate(mov.date)}
