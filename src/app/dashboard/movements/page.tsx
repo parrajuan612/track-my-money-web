@@ -77,7 +77,7 @@ export default function MovementsPage() {
     try {
       const filters: any = { page, page_size: 10 };
       // Usamos debouncedSearch en lugar del search instantáneo
-      if (debouncedSearch) filters.search = debouncedSearch; 
+      if (debouncedSearch) filters.query = debouncedSearch;
       if (startDate) filters.start_date = startDate;
       if (endDate) filters.end_date = endDate;
       if (type) filters.type = type;
