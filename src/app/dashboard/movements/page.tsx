@@ -41,6 +41,7 @@ export default function MovementsPage() {
 
   // Filtros
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState(""); // ¡NUEVO! Estado para la búsqueda con retraso
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [type, setType] = useState("");
@@ -54,19 +55,29 @@ export default function MovementsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newMov, setNewMov] = useState({
     date: new Date().toISOString().split('T')[0],
-    account_id: "", // ¡NUEVO CAMPO!
+    account_id: "", 
     description: "",
     amount: "",
     type: "expense",
     category_id: 12
   });
 
+  // ¡MAGIA DE LA INDUSTRIA!: Esperar 500ms después de que el usuario deja de escribir
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      if (search !== "") setPage(1); // Regresar a la página 1 al buscar
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   // 1. Cargar la tabla y las cuentas
   const fetchMovements = useCallback(async () => {
     setLoading(true);
     try {
       const filters: any = { page, page_size: 10 };
-      if (search) filters.search = search;
+      // Usamos debouncedSearch en lugar del search instantáneo
+      if (debouncedSearch) filters.search = debouncedSearch; 
       if (startDate) filters.start_date = startDate;
       if (endDate) filters.end_date = endDate;
       if (type) filters.type = type;
@@ -83,7 +94,7 @@ export default function MovementsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, startDate, endDate, type, categoryId]);
+  }, [page, debouncedSearch, startDate, endDate, type, categoryId]); // Agregamos debouncedSearch a las dependencias
 
   // Cargar cuentas solo una vez al montar el componente
   useEffect(() => {
@@ -157,7 +168,7 @@ export default function MovementsPage() {
     try {
       await movementService.createMovement({
         date: newMov.date,
-        account_id: newMov.account_id, // Enviamos el ID de la cuenta elegida
+        account_id: newMov.account_id, 
         description: newMov.description,
         amount: Number(newMov.amount),
         type: newMov.type,
@@ -346,8 +357,7 @@ export default function MovementsPage() {
         )}
       </div>
 
-      {/* --- MODAL DE EDICIÓN FLOTANTE --- */}
-      {/* ... (Se mantiene igual que antes) ... */}
+      {/* --- MODALES DE EDICIÓN Y CREACIÓN (Sin Cambios) --- */}
       {isEditModalOpen && editingMov && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1f35]/40 backdrop-blur-sm px-4">
           <div className="w-full max-w-md rounded-[24px] bg-white p-6 shadow-2xl">
@@ -442,7 +452,6 @@ export default function MovementsPage() {
         </div>
       )}
 
-      {/* --- MODAL DE CREACIÓN FLOTANTE --- */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1f35]/40 backdrop-blur-sm px-4">
           <div className="w-full max-w-md rounded-[24px] bg-white p-6 shadow-2xl">
@@ -454,7 +463,6 @@ export default function MovementsPage() {
             </div>
 
             <form onSubmit={handleCreate} className="flex flex-col gap-4">
-              
               <div className="flex gap-4">
                 <div className="flex-1">
                   <label className="mb-1 block text-xs font-bold text-[#8c8ca5] uppercase tracking-wider">Fecha</label>
@@ -468,7 +476,6 @@ export default function MovementsPage() {
                 </div>
               </div>
 
-              {/* ¡NUEVO SELECTOR DE CUENTAS! */}
               <div>
                 <label className="mb-1 block text-xs font-bold text-[#8c8ca5] uppercase tracking-wider">Cuenta Destino / Origen</label>
                 <div className="relative">
